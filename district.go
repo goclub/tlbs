@@ -7,8 +7,8 @@ import (
 )
 
 type District struct {
-	Data        []DistrictItem
-	AdcodeIndex map[string]int
+	Data            []DistrictItem
+	adcodeIndexHash map[string]int
 }
 type DistrictItem struct {
 	ID       string               `json:"id"`
@@ -33,14 +33,14 @@ func NewDistrict(data []byte) (d District, err error) {
 	d.Data = append(d.Data, jsondata[0]...)
 	d.Data = append(d.Data, jsondata[1]...)
 	d.Data = append(d.Data, jsondata[2]...)
-	d.AdcodeIndex = map[string]int{}
+	d.adcodeIndexHash = map[string]int{}
 	for i, data := range d.Data {
-		d.AdcodeIndex[data.ID] = i
+		d.adcodeIndexHash[data.ID] = i
 	}
 	return
 }
 func (v District) FindByADCode(adcode string) (item DistrictItem, has bool) {
-	index, hasIndex := v.AdcodeIndex[adcode]
+	index, hasIndex := v.adcodeIndexHash[adcode]
 	if hasIndex == false {
 		return
 	}
@@ -93,7 +93,7 @@ func LevelSwitch() (province, city, district Level) {
 }
 
 type Relationship struct {
-	Fuzzy    bool   // 如果 adcode=130526 找不到.将 Fuzzy 设为 true,然后按照 adcode=130500 查找,还是找不到按照 adcode=130000
+	Fuzzy    bool   // 因为行政区域的更新不可预测,所以自带模糊查询. 如果 adcode=130526 找不到.将 Fuzzy 设为 true,然后按照 adcode=130500 查找,还是找不到按照 adcode=130000
 	Adcode   string // Fuzzy = false 时 adcode 为入参 adcode, Fuzzy = true 会被修改
 	Level    Level  // 省市区级别
 	Province DistrictItem
@@ -123,7 +123,7 @@ func (v District) Relationship(adcode string) (r Relationship, has bool) {
 	return
 }
 func (v District) coreRelationship(adcode string) (r Relationship, has bool) {
-	itemIndex, hasItem := v.AdcodeIndex[adcode]
+	itemIndex, hasItem := v.adcodeIndexHash[adcode]
 	if hasItem == false {
 		return
 	}
