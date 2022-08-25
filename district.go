@@ -72,11 +72,12 @@ const (
 	LevelProvince Level = 1
 	LevelCity     Level = 2
 	LevelDistrict Level = 3
+	LevelOther    Level = 99 // adcode = 999999
 )
 
 // LevelSwitch
 // example:
-// province, city, district := tlbs.LevelSwitch()
+// province, city, district, other := tlbs.LevelSwitch()
 //	switch v {
 //	case province:
 //		// TODO write code
@@ -84,12 +85,14 @@ const (
 //		// TODO write code
 //	case district:
 //		// TODO write code
+//	case other:
+//		// TODO write code
 //	default:
 //		err = xerr.New(fmt.Sprintf("tlbs.Level can not be %v", v))
 //		return
 //	}
-func LevelSwitch() (province, city, district Level) {
-	return LevelProvince, LevelCity, LevelDistrict
+func LevelSwitch() (province, city, district, other Level) {
+	return LevelProvince, LevelCity, LevelDistrict, LevelOther
 }
 
 type Relationship struct {
@@ -106,6 +109,16 @@ type Relationship struct {
 func (v District) Relationship(adcode string) (r Relationship, has bool) {
 	if len(adcode) != 6 {
 		return
+	}
+	if adcode == "999999" {
+		r = Relationship{
+			Fuzzy:    false,
+			Adcode:   adcode,
+			Level:    LevelOther,
+			Province: DistrictItem{},
+			City:     DistrictItem{},
+			District: DistrictItem{},
+		}
 	}
 	r, has = v.coreRelationship(adcode)
 	fuzzy := false
