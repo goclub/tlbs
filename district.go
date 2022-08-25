@@ -119,6 +119,8 @@ func (v District) Relationship(adcode string) (r Relationship, has bool) {
 			City:     DistrictItem{},
 			District: DistrictItem{},
 		}
+		has = true
+		return
 	}
 	r, has = v.coreRelationship(adcode)
 	fuzzy := false
