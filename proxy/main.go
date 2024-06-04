@@ -159,7 +159,16 @@ func (p Proxy) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	if r, err = http.NewRequest(req.Method, newURL.String(), nil); err != nil {
 		return
 	}
+	logValues := []any{canUseKey, req.URL.String(), newURL.String()}
+	defer func() {
+		if _, err = db.Exec(context.TODO(), "INSERT INTO tlbs_key_log (`key`, `r_url`, `t_url`, `body`) VALUES (?, ?, ?, ?)", logValues); err != nil {
+			xerr.PrintStack(err)
+			err = nil
+			// 忽略插入错误
+		}
+	}()
 	if proxyResp, bodyClose, statusCode, err := httpClient.Do(r); err != nil {
+		logValues = append(logValues, err.Error())
 		writeError(resp, err.Error())
 		return
 	} else {
@@ -169,10 +178,10 @@ func (p Proxy) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		if b, err = ioutil.ReadAll(proxyResp.Body); err != nil {
 			return
 		}
+		logValues = append(logValues, string(b))
 		resp.Write(b)
 		return
 	}
-
 	return
 }
 func run() (err error) {
