@@ -76,7 +76,9 @@ func proxyRequest(resp http.ResponseWriter, req *http.Request) (canUseKey string
 	ctx := context.Background()
 	apiPath := matchAPIPath(req)
 	today := xtime.Today(xtime.LocChina)
-	for _, v := range config.Keys {
+	keys := config.Keys
+	sl.Shuffle(keys)
+	for _, v := range keys {
 		limit := v.API[apiPath].Limit
 		if limit == 0 {
 			limit = v.Limit
