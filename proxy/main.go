@@ -83,18 +83,29 @@ func proxyRequest(resp http.ResponseWriter, req *http.Request) (canUseKey string
 		if limit == 0 {
 			limit = v.Limit
 		}
-		if err = db.InsertModel(ctx, &TlbsKeyUseRecord{
-			Key:     v.Key,
-			Date:    today,
-			ApiPath: apiPath,
-			Count:   0,
-		}, sq.QB{
-			UseInsertIgnoreInto: true,
+		col := TlbsKeyUseRecord{}.Column()
+		var hasRecord bool
+		if hasRecord, err = db.Has(ctx, &TlbsKeyUseRecord{}, sq.QB{
+			Where: sq.
+				And(col.Key, sq.Equal(v.Key)).
+				And(col.Date, sq.Equal(today)).
+				And(col.ApiPath, sq.Equal(apiPath)),
 		}); err != nil {
 			return
 		}
+		if hasRecord == false {
+			if err = db.InsertModel(ctx, &TlbsKeyUseRecord{
+				Key:     v.Key,
+				Date:    today,
+				ApiPath: apiPath,
+				Count:   0,
+			}, sq.QB{
+				UseInsertIgnoreInto: true,
+			}); err != nil {
+				return
+			}
+		}
 		var aff int64
-		col := TlbsKeyUseRecord{}.Column()
 		if aff, err = db.UpdateAffected(ctx, &TlbsKeyUseRecord{}, sq.QB{
 			Where: sq.
 				And(col.Key, sq.Equal(v.Key)).
