@@ -76,7 +76,7 @@ func proxyRequest(resp http.ResponseWriter, req *http.Request) (canUseKey string
 	ctx := context.Background()
 	apiPath := matchAPIPath(req)
 	today := xtime.Today(xtime.LocChina)
-	tempKey := []ConfigKey
+	tempKey := []ConfigKey{}
 	for _, k := range config.Keys {
 		tempKey = append(tempKey, k)
 	}
