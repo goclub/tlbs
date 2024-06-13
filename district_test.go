@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/goclub/tlbs"
 	"github.com/stretchr/testify/assert"
+	"strings"
 	"testing"
 )
 
@@ -127,6 +128,56 @@ func TestNewDistrict(t *testing.T) {
 			assert.Equal(t, r.District.ID, "441999")
 		}
 		// -------------
+		return struct{}{}
+	}()
+}
+
+func TestRelationByAddress(t *testing.T) {
+	func() struct{} {
+		// -------------
+		var err error
+		_ = err
+		ctx := context.Background()
+		_ = ctx
+		d, err := tlbs.NewDistrict(tlbs.DataDistrict20240319) // indivisible begin
+		assert.NoError(t, err)                                // indivisible end
+		type Case struct {
+			Addr string
+			Out  string
+		}
+		list := []Case{
+			{"新疆哈密市", "新疆维吾尔自治区,哈密市,."},
+			{"北京", "北京市,,."},
+			{"北京市", "北京市,,."},
+			{"北京市海淀区", "北京市,北京市,海淀区."},
+			{"上海市黄浦区", "上海市,上海市,黄浦区."},
+			{"广东省", "广东省,,."},
+			{"广东省广州市", "广东省,广州市,."},
+			{"广东省广州市天河区", "广东省,广州市,天河区."},
+			{"香港", "香港特别行政区,,."},
+			{"澳门", "澳门特别行政区,,."},
+			{"西藏", "西藏自治区,,."},
+			{"宁夏", "宁夏回族自治区,,."},
+			{"新疆", "新疆维吾尔自治区,,."},
+			{"台湾", "台湾省,,."},
+			{"台湾省", "台湾省,,."},
+			{"台湾省台北市", "台湾省,台北市,."},
+			{"内蒙古", "内蒙古自治区,,."},
+			{"内蒙古自治区", "内蒙古自治区,,."},
+			{"内蒙古赤峰市克什克腾旗", "内蒙古自治区,赤峰市,克什克腾旗."},
+		}
+		for _, c := range list {
+			r, has := d.RelationshipByAddress(c.Addr)
+			outAddr := strings.Join([]string{r.Province.Fullname, r.City.Fullname, r.District.Fullname},
+				",") + "."
+			if has == false && c.Out != "" {
+				assert.Equal(t, has, false, c.Addr)
+				continue
+			}
+			if outAddr != c.Out {
+				assert.Equal(t, c.Out, outAddr, c.Addr)
+			}
+		}
 		return struct{}{}
 	}()
 }

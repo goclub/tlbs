@@ -4,14 +4,23 @@ import (
 	xerr "github.com/goclub/error"
 	xjson "github.com/goclub/json"
 	"log"
+	"strings"
 )
 
 type District struct {
 	Data            []DistrictItem
+	LevelData       [3][]DistrictItem
 	adcodeIndexHash map[string]int
+	// nameIndexHash   map[string][]nameHash
 }
+
+//type nameHash struct {
+//	Index int
+//	Level Level
+//}
 type DistrictItem struct {
-	ID       string               `json:"id"`
+	ID string `json:"id"`
+	// Deprecated: FullName 更全,部分区县 Name 是空的 FullName有名字
 	Name     string               `json:"name"`
 	Fullname string               `json:"fullname"`
 	Pinyin   []string             `json:"pinyin"`
@@ -30,6 +39,7 @@ func NewDistrict(data []byte) (d District, err error) {
 		err = xerr.WrapPrefix("unmarshal district json error", err)
 		return
 	}
+	d.LevelData = jsondata
 	d.Data = append(d.Data, jsondata[0]...)
 	d.Data = append(d.Data, jsondata[1]...)
 	d.Data = append(d.Data, jsondata[2]...)
@@ -37,6 +47,22 @@ func NewDistrict(data []byte) (d District, err error) {
 	for i, data := range d.Data {
 		d.adcodeIndexHash[data.ID] = i
 	}
+	//tempI := 0
+	//d.nameIndexHash = map[string][]nameHash{}
+	//indexHash := func(data []DistrictItem) {
+	//	for i, item := range data {
+	//		o := tempI + i
+	//		d.nameIndexHash[item.Fullname] = append(d.nameIndexHash[item.Name], nameHash{
+	//			Index: o,
+	//			Level: LevelProvince,
+	//		})
+	//		tempI++
+	//	}
+	//}
+	//indexHash(jsondata[0])
+	//indexHash(jsondata[1])
+	//indexHash(jsondata[2])
+	//xjson.Print("indexHash", d.nameIndexHash)
 	return
 }
 func (v District) FindByADCode(adcode string) (item DistrictItem, has bool) {
@@ -75,22 +101,6 @@ const (
 	LevelOther    Level = 99 // adcode = 999999
 )
 
-// LevelSwitch
-// example:
-// province, city, district, other := tlbs.LevelSwitch()
-//	switch v {
-//	case province:
-//		// TODO write code
-//	case city:
-//		// TODO write code
-//	case district:
-//		// TODO write code
-//	case other:
-//		// TODO write code
-//	default:
-//		err = xerr.New(fmt.Sprintf("tlbs.Level can not be %v", v))
-//		return
-//	}
 func LevelSwitch() (province, city, district, other Level) {
 	return LevelProvince, LevelCity, LevelDistrict, LevelOther
 }
@@ -173,5 +183,72 @@ func (v District) coreRelationship(adcode string) (r Relationship, has bool) {
 		}
 	}
 	has = true
+	return
+}
+
+func (v District) RelationshipByAddress(addr string) (r Relationship, has bool) {
+	type Info struct {
+		Index int
+		Item  DistrictItem
+	}
+	var p Info
+	var c Info
+	var district Info
+
+	match := func(info *Info, remainAddr string, data []DistrictItem) {
+		if remainAddr == "" {
+			return
+		}
+		for _, item := range data {
+			info.Index = strings.Index(remainAddr, item.Fullname)
+			if info.Index >= 0 {
+				info.Item = item
+				break
+			}
+			if item.Name != "" {
+				info.Index = strings.Index(remainAddr, item.Name)
+				if info.Index >= 0 {
+					info.Item = item
+					break
+				}
+			}
+		}
+	}
+	tempAddr := addr
+	match(&p, addr, v.LevelData[0])
+	if p.Item.ID != "" {
+		parent := p
+		tempAddr = strings.Replace(tempAddr, parent.Item.Fullname, "", 1)
+		tempAddr = strings.Replace(tempAddr, parent.Item.Name, "", 1)
+		match(&c, tempAddr, safeSlice(v.LevelData[1], parent.Item.Cidx))
+	}
+	if c.Item.ID != "" {
+		parent := c
+		tempAddr = strings.Replace(tempAddr, parent.Item.Fullname, "", 1)
+		tempAddr = strings.Replace(tempAddr, parent.Item.Name, "", 1)
+		match(&district, tempAddr, safeSlice(v.LevelData[2], parent.Item.Cidx))
+	}
+	// 直辖市的区
+	if c.Item.ID != "" && strings.HasSuffix(c.Item.ID, "00") == false && district.Item.ID == "" {
+		district = c
+		c = p
+	}
+	if p.Item.ID != "" {
+		has = true
+		r.Province = p.Item
+		r.Adcode = p.Item.ID
+		r.Level = LevelProvince
+	}
+	if c.Item.ID != "" {
+		r.City = c.Item
+		r.Adcode = c.Item.ID
+		r.Level = LevelCity
+	}
+	if district.Item.ID != "" {
+		r.District = district.Item
+		r.Adcode = district.Item.ID
+		r.Level = LevelDistrict
+	}
+
 	return
 }
