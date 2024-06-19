@@ -2,6 +2,7 @@ package tlbs_test
 
 import (
 	"context"
+	xjson "github.com/goclub/json"
 	"github.com/goclub/tlbs"
 	"github.com/stretchr/testify/assert"
 	"strings"
@@ -145,6 +146,15 @@ func TestRelationByAddress(t *testing.T) {
 			Addr string
 			Out  string
 		}
+		{
+			r, h := d.RelationshipByAddress("新疆哈密市")
+			assert.Equal(t, h, true)
+			if b, err := xjson.Marshal(r); err != nil {
+				panic(err)
+			} else {
+				assert.Equal(t, string(b), `{"Fuzzy":false,"Adcode":"650500","Level":2,"Province":{"id":"650000","name":"新疆","fullname":"新疆维吾尔自治区","pinyin":["xin","jiang"],"location":{"lat":43.793301,"lng":87.628579},"cidx":[430,454]},"City":{"id":"650500","name":"哈密","fullname":"哈密市","pinyin":["ha","mi"],"location":{"lat":42.819346,"lng":93.515053},"cidx":[2653,2655]},"District":{"id":"","name":"","fullname":"","pinyin":[],"location":{"lat":0,"lng":0},"cidx":[]}}`)
+			}
+		}
 		list := []Case{
 			{"新疆哈密市", "新疆维吾尔自治区,哈密市,."},
 			{"北京", "北京市,,."},
@@ -165,6 +175,8 @@ func TestRelationByAddress(t *testing.T) {
 			{"内蒙古", "内蒙古自治区,,."},
 			{"内蒙古自治区", "内蒙古自治区,,."},
 			{"内蒙古赤峰市克什克腾旗", "内蒙古自治区,赤峰市,克什克腾旗."},
+			{"山西省朔州市怀仁县", "山西省,朔州市,."},
+			{"辽宁省沈阳市沈河区", "辽宁省,沈阳市,沈河区."},
 		}
 		for _, c := range list {
 			r, has := d.RelationshipByAddress(c.Addr)
